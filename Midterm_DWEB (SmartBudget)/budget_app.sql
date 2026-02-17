@@ -26,12 +26,23 @@ CREATE TABLE IF NOT EXISTS budgets (
   total_budget DECIMAL(10,2)
 );
 
+-- Category budgets per user per month
+CREATE TABLE IF NOT EXISTS category_budgets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  month VARCHAR(20),
+  category VARCHAR(50),
+  allocated_amount DECIMAL(10,2),
+  percentage DECIMAL(5,2)
+);
+
 -- Expenses per user
 CREATE TABLE IF NOT EXISTS expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
   amount DECIMAL(10,2),
   category VARCHAR(50),
+  description VARCHAR(255),
   date DATE
 );
 

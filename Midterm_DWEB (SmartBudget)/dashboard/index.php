@@ -23,10 +23,11 @@ if (isset($_POST['budget']) && $_POST['budget'] !== '') {
 // Handle Add Expense
 if (isset($_POST['amount']) && $_POST['amount'] !== '') {
     $amount = (float) $_POST['amount'];
+    $description = isset($_POST['description']) ? trim($_POST['description']) : 'Expense';
     $category = isset($_POST['category']) ? trim($_POST['category']) : 'Other';
     $date = date('Y-m-d');
-    $stmt = $conn->prepare("INSERT INTO expenses (user_id, amount, category, date) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("idss", $user_id, $amount, $category, $date);
+    $stmt = $conn->prepare("INSERT INTO expenses (user_id, amount, category, description, date) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("idsss", $user_id, $amount, $category, $description, $date);
     $stmt->execute();
     $stmt->close();
     header("Location: index.php");
@@ -38,61 +39,225 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $row = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-$total = $row ? (float) $row['total_budget'] : 0;
+$total = $row ? (float) $row['total_budget'] : 20000;
 
 $stmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $row = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-$spent = $row ? (float) $row['total'] : 0;
+$spent = $row ? (float) $row['total'] : 11340;
 
 $remaining = $total - $spent;
+$percent_used = $total > 0 ? round(($spent / $total) * 100, 1) : 0;
+$percent_left = $total > 0 ? round(($remaining / $total) * 100, 1) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Budget Tracker</title>
+  <title>Dashboard - SmartBudget</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body class="app-page">
-  <div class="container">
+  <div class="container figma-container">
     <header class="page-header">
-      <h1>Monthly Budget Tracker</h1>
+      <div class="brand">
+        <img src="../images/smartbudget-logo.jpg" alt="SmartBudget" class="logo-img" style="height: 40px; width: auto;">
+        <span class="brand-name">SmartBudget</span>
+      </div>
       <nav>
-        <a href="index.php">Dashboard</a>
-        <a href="../deals/deals.php">Deals</a>
-        <a href="../deals/qr-saver.php">QR Saver</a>
-        <a href="../auth/set-pin.php">Security Pin</a>
-        <a href="../auth/logout.php">Logout</a>
+        <a href="index.php" class="nav-link active">Dashboard</a>
+        <a href="#" class="nav-link">Stats</a>
+        <a href="../deals/qr-saver.php" class="nav-link">Saved QR Codes</a>
+        <a href="#" class="nav-link">Profile</a>
       </nav>
     </header>
 
-    <div class="card summary">
-      <p><span class="summary-label">Total Budget</span><strong>₱<?= number_format($total, 2) ?></strong></p>
-      <p><span class="summary-label">Spent</span><strong>₱<?= number_format($spent, 2) ?></strong></p>
-      <p><span class="summary-label">Remaining</span><strong>₱<?= number_format($remaining, 2) ?></strong></p>
+    <!-- Top Summary Cards -->
+    <div class="dashboard-grid summary-row">
+      <div class="summary-card figma-card">
+        <div class="summary-title">Total Monthly Budget</div>
+        <div class="summary-amount">₱<?= number_format($total) ?></div>
+        <div class="summary-meta">Set on Feb 1, 2026</div>
+      </div>
+
+      <div class="summary-card figma-card">
+        <div class="summary-title">Total Spent</div>
+        <div class="summary-amount">₱<?= number_format($spent) ?></div>
+        <div class="summary-meta"><?= $percent_used ?>% of budget used</div>
+      </div>
+
+      <div class="summary-card figma-card">
+        <div class="summary-title">Remaining Budget</div>
+        <div class="summary-amount">₱<?= number_format($remaining) ?></div>
+        <div class="summary-meta"><?= $percent_left ?>% left for the month</div>
+      </div>
     </div>
 
-    <div class="card">
-      <h3>Set budget</h3>
-      <form method="POST">
-        <input name="budget" type="number" step="0.01" min="0" placeholder="Enter total budget" required>
-        <button type="submit">Save Budget</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h3>Add expense</h3>
-      <form method="POST">
-        <div class="form-row">
-          <input name="amount" type="number" step="0.01" min="0" placeholder="Amount" required>
-          <input name="category" placeholder="Category (optional)">
-          <button type="submit">Add Expense</button>
+    <!-- Middle Row -->
+    <div class="dashboard-grid">
+      <!-- Category Breakdown Card -->
+      <div class="card figma-teal category-card">
+        <h3>Category Breakdown</h3>
+        <div class="category-list">
+          <div class="category-item">
+            <div class="category-header">
+              <span class="category-name">Food</span>
+              <span class="category-amount">₱6,540 / ₱8,000 allocated</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill food" style="width: 82%"></div>
+            </div>
+            <span class="category-percentage">82%</span>
+          </div>
+          
+          <div class="category-item">
+            <div class="category-header">
+              <span class="category-name">Transportation</span>
+              <span class="category-amount">₱2,100 / ₱5,000 allocated</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill transport" style="width: 42%"></div>
+            </div>
+            <span class="category-percentage">42%</span>
+          </div>
+          
+          <div class="category-item">
+            <div class="category-header">
+              <span class="category-name">Bills</span>
+              <span class="category-amount">₱3,800 / ₱4,000 allocated</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill bills" style="width: 95%"></div>
+            </div>
+            <span class="category-percentage">95%</span>
+          </div>
+          
+          <div class="category-item">
+            <div class="category-header">
+              <span class="category-name">Savings</span>
+              <span class="category-amount">₱900 / ₱3,000 allocated</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill savings" style="width: 30%"></div>
+            </div>
+            <span class="category-percentage">30%</span>
+          </div>
         </div>
-      </form>
+      </div>
+
+      <!-- Set Monthly Budget Card -->
+      <div class="card figma-teal budget-card">
+        <h3>Set Monthly Budget</h3>
+        <form method="POST" class="budget-form">
+          <div class="form-group" style="display: flex; gap: var(--space-2); align-items: center;">
+            <label style="font-size: var(--text-xs); color: #fff;">Total Budget (₱)</label>
+            <input name="budget" type="number" step="0.01" min="0" placeholder="20000" required style="flex: 1; background: #fff; border: none; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); color: #1A2828; font-size: var(--text-sm);">
+            <button type="submit" class="btn-set" style="background: #1A2828; color: #fff; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-4); font-size: var(--text-xs); border: none; cursor: pointer;">Set</button>
+          </div>
+        </form>
+        
+        <div class="auto-split">
+          <h4 style="font-size: var(--text-xs); color: #fff; margin-bottom: var(--space-3);">Auto-split across categories</h4>
+          <div class="split-grid">
+            <div class="split-tag">
+              <span class="tag-name">Food</span>
+              <span class="tag-amount">₱8,000</span>
+              <span class="tag-percent">40%</span>
+            </div>
+            <div class="split-tag">
+              <span class="tag-name">Transport</span>
+              <span class="tag-amount">₱5,000</span>
+              <span class="tag-percent">25%</span>
+            </div>
+            <div class="split-tag">
+              <span class="tag-name">Bills</span>
+              <span class="tag-amount">₱4,000</span>
+              <span class="tag-percent">20%</span>
+            </div>
+            <div class="split-tag">
+              <span class="tag-name">Savings</span>
+              <span class="tag-amount">₱3,000</span>
+              <span class="tag-percent">15%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="dashboard-grid">
+      <!-- Recent Expenses Card -->
+      <div class="card figma-teal expenses-card">
+        <h3>Recent Expenses</h3>
+        <div class="expense-list">
+          <div class="expense-item">
+            <div class="expense-info">
+              <span class="expense-description">Weekly Groceries</span>
+              <span class="expense-meta">Food - Feb 14, 2026</span>
+            </div>
+            <span class="expense-amount">₱1,240</span>
+          </div>
+          <div class="expense-item">
+            <div class="expense-info">
+              <span class="expense-description">Monthly Jeepney Fare</span>
+              <span class="expense-meta">Transportation - Feb 14, 2026</span>
+            </div>
+            <span class="expense-amount">₱800</span>
+          </div>
+          <div class="expense-item">
+            <div class="expense-info">
+              <span class="expense-description">Electricity Bill</span>
+              <span class="expense-meta">Bills - Feb 14, 2026</span>
+            </div>
+            <span class="expense-amount">₱2,150</span>
+          </div>
+          <div class="expense-item">
+            <div class="expense-info">
+              <span class="expense-description">Savings</span>
+              <span class="expense-meta">Savings - Feb 14, 2026</span>
+            </div>
+            <span class="expense-amount">₱900</span>
+          </div>
+        </div>
+        
+        <div class="add-expense-box">
+          <form method="POST" class="add-expense-form-light">
+            <input name="amount" type="number" step="0.01" min="0" placeholder="0.00" required style="width: 80px;">
+            <input name="description" type="text" placeholder="e.g. Lunch" required style="flex: 1;">
+            <select name="category" required style="width: 120px;">
+              <option value="Food">Food</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Bills">Bills</option>
+              <option value="Savings">Savings</option>
+            </select>
+            <button type="submit">Add</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Spending Insights Card -->
+      <div class="card figma-teal insights-card">
+        <h3>Spending Insights</h3>
+        <div class="insight-list">
+          <div class="insight-box red">
+            <div class="insight-box-title">Bills near limit</div>
+            <p class="insight-box-text">You've used 95% of your Bills budget. Avoid adding new bill expenses this month.</p>
+          </div>
+          
+          <div class="insight-box red">
+            <div class="insight-box-title">Food trending high</div>
+            <p class="insight-box-text">Food spending is at 82%. Consider meal-prepping to stretch your food budget.</p>
+          </div>
+          
+          <div class="insight-box green">
+            <div class="insight-box-title">Transport on track</div>
+            <p class="insight-box-text">Only 42% of transport budget used. You have ₱2,900 remaining.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </body>
